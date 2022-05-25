@@ -6,9 +6,12 @@ from selenium.webdriver.common.by import By
 
 
 class AutomacaoProjetoVer:
-    def __init__(self):
+    def __init__(self, palavra_chave: str, ano=None, texto_procurado: str = None):
         self.webdriver = None
         self.actions = None
+        self.palavra_chave = palavra_chave
+        self.ano = str(ano)
+        self.texto_procurado = texto_procurado
 
     def filtrar_documentos(self):
         self.webdriver = webdriver.Chrome()
@@ -17,7 +20,7 @@ class AutomacaoProjetoVer:
         self.webdriver.get('https://acordaos.economia.gov.br/solr/acordaos2/browse/')
 
         campo_busca = self.webdriver.find_element(by=By.XPATH, value='//*[@id="q"]')
-        campo_busca.send_keys('covid')
+        campo_busca.send_keys(self.palavra_chave)
 
         botao_buscar = self.webdriver.find_element(by=By.XPATH, value='//*[@id="querySubmit"]')
         botao_buscar.click()
@@ -50,14 +53,21 @@ class AutomacaoProjetoVer:
                 botao_proxima_pagina.click()
 
         df_documentos = pd.DataFrame(documentos, dtype=str)
-        df_documentos_filtrados = df_documentos[(df_documentos['ano_sessao_s'] == '2021') & \
-                                                (df_documentos['conteudo_txt'].str.contains('coronavirus') \
-                                                 | df_documentos['conteudo_txt'].str.contains('coronavírus'))]
 
-        return df_documentos_filtrados
+        if self.ano:
+            df_documentos = df_documentos[df_documentos['ano_sessao_s'] == self.ano]
+
+        if self.texto_procurado:
+            df_documentos = df_documentos[df_documentos['conteudo_txt'].str.contains(self.texto_procurado)]
+
+        self.webdriver.close()
+
+        return df_documentos
 
 
 if __name__ == '__main__':
-    automacao = AutomacaoProjetoVer()
-    documentos_filrados = automacao.filtrar_documentos()
-    print(documentos_filrados)
+    automacao = AutomacaoProjetoVer(palavra_chave='covid',
+                                    ano=2021,
+                                    texto_procurado='coronavírus')
+    documentos_filtrados = automacao.filtrar_documentos()
+    print(documentos_filtrados)
